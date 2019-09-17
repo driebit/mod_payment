@@ -1,0 +1,5 @@
+[
+    {payment_psp_done, [ "payment", "ready", payment_nr ], controller_template, [ {template, "payment_psp_done.tpl"} ]},
+    {payments_admin_overview, [ "admin", "payments" ], controller_admin, [ {template, "admin_payments.tpl"} ]},
+    {payment_psp_detail, [ "payment", "redirect-psp", payment_nr ], controller_template, [ {template, "payment_redirect_psp.tpl"} ]}
+].
