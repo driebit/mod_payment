@@ -91,7 +91,12 @@ event(#submit{ message={cancel_subscription, _Args} }, Context) ->
 
 
 observe_search_query(#search_query{ search={payments, _Args}, offsetlimit=OffsetLimit }, Context) ->
-    m_payment:search_query(OffsetLimit, Context);
+    case z_acl:is_allowed(use, mod_payment, Context) orelse z_acl:is_admin(Context) of
+        true ->
+            m_payment:search_query(OffsetLimit, Context);
+        false ->
+            []
+    end;
 observe_search_query(#search_query{}, _Context) ->
     undefined.
 
