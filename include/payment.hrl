@@ -8,15 +8,16 @@
     % Data passed as identification of this request for status
     % payment notifications.
     key :: term(),
-    user_id :: m_rsc:resource(),
+    user_id :: m_rsc:resource() | undefined,
     is_qargs = false :: boolean(),
 
     currency = ?PAYMENT_CURRENCY_DEFAULT :: binary(),
     amount :: float(),
-    description :: binary(),
-    description_html = <<>> :: binary(),
+    description = undefined :: binary() | undefined,
+    description_html = undefined :: binary() | undefined,
     language :: atom(),
-    recurring :: boolean()
+    recurring = false :: boolean(),
+    extra_props = [] :: list( {atom(), binary()} )
 }).
 
 %% @doc On a successful payment initialization, return the uri where

@@ -27,6 +27,12 @@
     event/2,
     observe_search_query/2,
     observe_payment_request/2,
+
+    observe_export_resource_filename/2,
+    observe_export_resource_header/2,
+    observe_export_resource_encode/2,
+    observe_export_resource_data/2,
+
     observe_admin_menu/3,
     set_payment_status/3,
     manage_schema/2
@@ -43,7 +49,10 @@ event(#submit{message={payment, Args} }, Context) ->
         undefined -> z_acl:user(Context);
         UId when is_integer(UId) -> UId
     end,
-    Recurring = z_convert:to_bool( z_context:get_q(<<"recurring">>, Context) ),
+    Recurring = case proplists:get_value(recurring, Args) of
+        undefined -> z_convert:to_bool( z_context:get_q(<<"recurring">>, Context) );
+        R -> z_convert:to_bool(R)
+    end,
     Amount = case proplists:get_value(amount, Args) of
         undefined -> z_convert:to_float(z_context:get_q_validated(amount, Context));
         ArgAmount -> ArgAmount
@@ -52,7 +61,21 @@ event(#submit{message={payment, Args} }, Context) ->
         undefined -> ?PAYMENT_CURRENCY_DEFAULT;
         ArgCurrency -> ArgCurrency
     end,
-    Description = proplists:get_value(description, Args),
+    Description = case proplists:get_value(description, Args) of
+        undefined -> z_html:escape(z_context:get_q(<<"description">>, Context));
+        Desc -> Desc
+    end,
+    ExtraProps = lists:filter(
+        fun
+            ({key, _}) -> false;
+            ({amount, _}) -> false;
+            ({currency, _}) -> false;
+            ({user_id, _}) -> false;
+            ({recurring, _}) -> false;
+            ({description, _}) -> false;
+            ({_, _}) -> true
+        end,
+        Args),
     PaymentRequest = #payment_request{
         key = z_convert:to_binary(Key),
         user_id = UserId,
@@ -61,7 +84,8 @@ event(#submit{message={payment, Args} }, Context) ->
         language = z_context:language(Context),
         description_html = Description,
         is_qargs = true,
-        recurring = Recurring
+        recurring = Recurring,
+        extra_props = ExtraProps
     },
     case z_notifier:first(PaymentRequest, Context) of
         #payment_request_redirect{ redirect_uri = RedirectUri } ->
@@ -152,6 +176,37 @@ observe_payment_request(#payment_request{} = Req, Context) ->
                         [ Reason, Req, z_context:get_q_all_noz(Context) ]),
             Error
     end.
+
+-spec observe_export_resource_filename(#export_resource_filename{}, z:context()) -> {ok, binary()}.
+observe_export_resource_filename(#export_resource_filename{dispatch = export_payments_csv}, Context) ->
+    {ok, iolist_to_binary([<<"payments-">>, z_datetime:format(z_utils:now(), "Ymd-His", Context)])};
+observe_export_resource_filename(_, _) ->
+    undefined.
+
+%% @doc Add CSV headers
+-spec observe_export_resource_header(#export_resource_header{}, z:context()) -> tuple().
+observe_export_resource_header(#export_resource_header{dispatch = export_payments_csv}, _Context) ->
+    {ok, payment_export:headers()};
+observe_export_resource_header(_, _) ->
+    undefined.
+
+observe_export_resource_data(#export_resource_data{dispatch = export_payments_csv}, Context) ->
+    payment_export:data(Context);
+observe_export_resource_data(_, _) ->
+    undefined.
+
+-spec observe_export_resource_encode(#export_resource_encode{}, z:context()) -> {ok, binary()}.
+observe_export_resource_encode(#export_resource_encode{dispatch = export_payments_csv, data = Item}, Context) ->
+    case payment_export:values(Item, Context) of
+        undefined ->
+            %% Ignore item
+            {ok, <<>>};
+        Values ->
+            {ok, export_encode_csv:encode(Values, Context)}
+    end;
+observe_export_resource_encode(_, _) ->
+    undefined.
+
 
 %% @doc Called by a PSP, set the status of a payment. This also broadcasts success or failure for the payment.
 -spec set_payment_status(integer(), atom()|binary()|list(), z:context()) -> ok | {error, term()}.

@@ -1,7 +1,8 @@
 Payments module for Zotonic
 ===========================
 
-Base module for handling payments. Uses PSP specific modules for interfacing with the payment providers.
+Base module for handling payments. Uses Payment Service Provider (PSP) modules for interfacing with
+the payment providers.
 
 
 Payment form
@@ -16,11 +17,13 @@ To add a payment form to your website, make a form with the following postback:
 
 Optional arguments of the payment postback:
 
- * `key` - an identification of the payment, also shown on the overview in the admin
+ * `key` - an identification of the payment type, also shown on the overview in the admin
  * `amount` - the amount to be paid, overrules the `amount` form field
- * `currency` - the currency for the amount, overrule `currency` form field (defaults to EUR)
+ * `currency` - the currency for the amount, overrules `currency` form field (defaults to EUR)
+ * `recurring` - if the payment is recurring, overrules `recurring` form field (defaults to false)
  * `user_id` - the id of the user the payment is for (defaults to the current user)
  * `description` - the description for the ordered goods/services (HTML)
+ * All other arguments are saved as additional properties, which can be overruled with form fields 
 
 Required fields for the payment form:
 
@@ -40,7 +43,7 @@ Optional fields for the payment form:
  * `address_state` - State of address (defaults to current user's)
  * `address_postcode` - Postcode of address (defaults to current user's)
  * `address_country` - Country of address, should be two letter ISO code (defaults to current user's)
-
+ * `description` - Description of what has been ordered, could also be a referral identifier
 
 Subscriptions / Recurring Payments
 ----------------------------------
@@ -61,4 +64,18 @@ The subscription can be canceled with the following postback:
     {% wire id='cancel-subscription-button'
             postback={cancel_subscription}
     %}
+
+
+PSP Modules
+-----------
+
+This module provides the central payment administration. Interfacing with Payment Service Providers (PSP)
+is done using PSP specific modules.
+
+Current PSP specific module implements a payment interface to Mollie:
+
+    https://github.com/driebit/mod_payment_mollie
+
+Please check the modules for PSP specific configurations.
+
 

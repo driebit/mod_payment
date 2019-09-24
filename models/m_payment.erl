@@ -107,13 +107,40 @@ insert(PaymentReq, Context) ->
         {description, z_string:truncate(Descr, 60)},
         {description_html, DescrHTML},
         {language, language(UserId, Context)}
-    ] ++ naw_props(UserId, PaymentReq#payment_request.is_qargs, Context),
+    ] ++ naw_props(UserId, PaymentReq#payment_request.is_qargs, Context)
+      ++ extra_props(PaymentReq#payment_request.extra_props, PaymentReq#payment_request.is_qargs, Context),
     case validate_payment(Props) of
         ok ->
             z_db:insert(payment, Props, Context);
         {error, _} = Error ->
             Error
     end.
+
+% Extra properties
+extra_props(Props, false, _Context) ->
+    Props1 = lists:filter(
+        fun
+            ({_, <<>>}) -> false;
+            ({_, undefined}) -> false;
+            ({_, ""}) -> false;
+            ({_, _}) -> true;
+            (_) -> false
+        end,
+        Props),
+    z_sanitize:escape_props_check(Props1);
+extra_props(Props, true, Context) ->
+    Props1 = lists:map(
+        fun
+            ({K, _} = KV) ->
+                case z_context:get_q(K, Context) of
+                    undefined -> KV;
+                    V -> {K, V}
+                end;
+            (K) when is_atom(K) ->
+                {K, z_context:get_q(K, Context)}
+        end,
+        Props),
+    extra_props(Props1, false, Context).
 
 % We should have an email address, or an user-id, and name + phone no.
 validate_payment(Props) ->
