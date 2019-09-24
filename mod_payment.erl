@@ -28,6 +28,7 @@
     observe_search_query/2,
     observe_payment_request/2,
 
+    observe_export_resource_visible/2,
     observe_export_resource_filename/2,
     observe_export_resource_header/2,
     observe_export_resource_encode/2,
@@ -176,6 +177,13 @@ observe_payment_request(#payment_request{} = Req, Context) ->
                         [ Reason, Req, z_context:get_q_all_noz(Context) ]),
             Error
     end.
+
+
+-spec observe_export_resource_visible(#export_resource_visible{}, z:context()) -> boolean() | undefined.
+observe_export_resource_visible(#export_resource_visible{dispatch = export_payments_csv}, Context) ->
+    z_acl:is_allowed(use, mod_payment, Context);
+observe_export_resource_visible(_, _) ->
+    undefined.
 
 -spec observe_export_resource_filename(#export_resource_filename{}, z:context()) -> {ok, binary()}.
 observe_export_resource_filename(#export_resource_filename{dispatch = export_payments_csv}, Context) ->
