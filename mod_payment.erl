@@ -63,8 +63,14 @@ event(#submit{message={payment, Args} }, Context) ->
         ArgCurrency -> ArgCurrency
     end,
     Description = case proplists:get_value(description, Args) of
-        undefined -> z_html:escape(z_context:get_q(<<"description">>, Context));
-        Desc -> Desc
+        undefined ->
+            case z_html:escape(z_context:get_q(<<"description">>, Context)) of
+                <<>> -> proplists:get_value(default_description, Args);
+                undefined -> proplists:get_value(default_description, Args);
+                Desc -> Desc
+            end;
+        Desc ->
+            Desc
     end,
     ExtraProps = lists:filter(
         fun
@@ -74,6 +80,7 @@ event(#submit{message={payment, Args} }, Context) ->
             ({user_id, _}) -> false;
             ({recurring, _}) -> false;
             ({description, _}) -> false;
+            ({default_description, _}) -> false;
             ({_, _}) -> true
         end,
         Args),

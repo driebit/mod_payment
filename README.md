@@ -10,7 +10,7 @@ Payment form
 
 To add a payment form to your website, make a form with the following postback:
 
-    {% wire id="mypayment" type="submit" postback={payment} delegate=`mod_payment %}
+    {% wire id="mypayment" type="submit" postback={payment key="web-donation"} delegate=`mod_payment %}
     <form id="mypayment" method="post" action="postback">
         ...
     </form>
@@ -23,7 +23,8 @@ Optional arguments of the payment postback:
  * `recurring` - if the payment is recurring, overrules `recurring` form field (defaults to false)
  * `user_id` - the id of the user the payment is for (defaults to the current user)
  * `description` - the description for the ordered goods/services (HTML)
- * All other arguments are saved as additional properties, which can be overruled with form fields 
+ * `default_description` - used as the description if both `description` and `q.description` are empty
+ * All other arguments are saved as additional properties, which can be overruled with form fields
 
 Required fields for the payment form:
 
