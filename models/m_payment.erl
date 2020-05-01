@@ -1,7 +1,7 @@
-%% @copyright 2018 Driebit BV
+%% @copyright 2018-2020 Driebit BV
 %% @doc Main payment model and SQL definitions.
 
-%% Copyright 2018 Driebit BV
+%% Copyright 2018-2020 Driebit BV
 %%
 %% Licensed under the Apache License, Version 2.0 (the "License");
 %% you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@
     update_psp_handler/3,
     payment_psp_view_url/2,
     set_payment_status/3,
+    set_payment_status/4,
     cancel_recurring_payment/2,
 
     search_query/2,
@@ -171,7 +172,7 @@ is_email_address(Email) ->
     z_email_utils:is_email(Email).
 
 naw_props(UserId, IsQArgs, Context) ->
-    [
+    Naw = [
         {P, p(UserId, P, IsQArgs, Context)}
         || P <- [
             name_first,
@@ -186,7 +187,8 @@ naw_props(UserId, IsQArgs, Context) ->
             email,
             phone
         ]
-    ].
+    ],
+    lists:filter( fun({_,V}) -> V =/= undefined end, Naw ).
 
 p(Id, Prop, true, Context) ->
     case z_context:get_q(Prop, Context) of
@@ -297,6 +299,12 @@ update_psp_handler(PaymentId, Handler, Context) ->
 
 -spec set_payment_status(integer(), atom(), z:context()) -> {ok, changed|unchanged} | {error, term()}.
 set_payment_status(PaymentId, Status, Context) ->
+    Now = calendar:universal_time(),
+    set_payment_status(PaymentId, Status, Now, Context).
+
+-spec set_payment_status(integer(), atom(), calendar:datetime(), z:context()) ->
+    {ok, changed|unchanged} | {error, term()}.
+set_payment_status(PaymentId, Status, StatusDate, Context) ->
     z_db:transaction(
         fun(Ctx) ->
             CurrStatusBin = z_db:q1("
@@ -306,16 +314,24 @@ set_payment_status(PaymentId, Status, Context) ->
                 [PaymentId],
                 Ctx),
             case z_convert:to_atom(CurrStatusBin) of
-                undefined -> {error, notfound};
-                Status -> {ok, unchanged};
+                undefined ->
+                    {error, notfound};
+                Status ->
+                    {ok, unchanged};
                 _OldStatus ->
-                    1 = z_db:q("
+                    case z_db:q("
                         update payment
-                        set status = $1
-                        where id = $2",
-                        [Status, PaymentId],
-                        Ctx),
-                    {ok, changed}
+                        set status = $1,
+                            status_date = $3
+                        where id = $2
+                          and (   status_date is null
+                               or status_date <= $3)",
+                        [Status, PaymentId, StatusDate],
+                        Ctx)
+                    of
+                        0 -> {ok, unchanged};
+                        1 -> {ok, changed}
+                    end
             end
         end,
         Context).
@@ -367,6 +383,7 @@ install(Context) ->
                     user_id int,
                     payment_nr character varying(64) not null,
                     status character varying(16) not null default 'new',
+                    status_date timestamp,
                     recurring boolean not null default false,
 
                     psp_module character varying(64),
@@ -421,22 +438,40 @@ install(Context) ->
             ok;
         true ->
             add_recurring_column(Context),
+            add_status_date_column(Context),
             ok
     end.
 
 
 
-%% This column was added at a later time, so this function acts as a migration
+%% @doc Add recurring column if it was not yet present
 add_recurring_column(Context) ->
-    [] = z_db:q("DO $$
-                   BEGIN
-                     BEGIN
-                       ALTER TABLE payment ADD COLUMN recurring boolean not null default false;
-                     EXCEPTION
-                       WHEN duplicate_column THEN RAISE NOTICE 'column recurring already exists in payments.';
-                     END;
-                   END;
-                 $$", Context).
+    case lists:member(recurring, z_db:column_names(payment, Context)) of
+        true ->
+            ok;
+        false ->
+            [] = z_db:q("
+                ALTER TABLE payment
+                ADD COLUMN recurring boolean not null default false
+                ", Context),
+            z_db:flush(Context),
+            ok
+    end.
+
+%% @doc Add status_date column if it was not yet present
+add_status_date_column(Context) ->
+    case lists:member(status_date, z_db:column_names(payment, Context)) of
+        true ->
+            ok;
+        false ->
+            [] = z_db:q("
+                ALTER TABLE payment
+                ADD COLUMN status_date timestamp with timezone
+                ", Context),
+            z_db:flush(Context),
+            ok
+    end.
+
 
 cancel_recurring_payment(UserId, Context) ->
     z_db:q("update payment set recurring = false where user_id = $1", [UserId], Context).

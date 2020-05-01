@@ -23,6 +23,8 @@
 -mod_author("Driebit").
 -mod_schema(1).
 
+-author("Driebit <tech@driebit.nl>").
+
 -export([
     event/2,
     observe_search_query/2,
@@ -36,6 +38,7 @@
 
     observe_admin_menu/3,
     set_payment_status/3,
+    set_payment_status/4,
     manage_schema/2
 ]).
 
@@ -225,13 +228,17 @@ observe_export_resource_encode(_, _) ->
 
 %% @doc Called by a PSP, set the status of a payment. This also broadcasts success or failure for the payment.
 -spec set_payment_status(integer(), atom()|binary()|list(), z:context()) -> ok | {error, term()}.
-set_payment_status(PaymentId, Status, Context) when is_integer(PaymentId), is_binary(Status) ->
-    set_payment_status(PaymentId, binary_to_existing_atom(Status, utf8), Context);
-set_payment_status(PaymentId, Status, Context) when is_integer(PaymentId), is_list(Status) ->
-    set_payment_status(PaymentId, list_to_existing_atom(Status), Context);
-set_payment_status(PaymentId, Status, Context) when is_integer(PaymentId), is_atom(Status) ->
+set_payment_status(PaymentId, Status, Context) ->
+    set_payment_status(PaymentId, Status, calendar:universal_time(), Context).
+
+-spec set_payment_status(integer(), atom()|binary()|list(), calendar:datetime(), z:context()) -> ok | {error, term()}.
+set_payment_status(PaymentId, Status, DT, Context) when is_integer(PaymentId), is_binary(Status) ->
+    set_payment_status(PaymentId, binary_to_existing_atom(Status, utf8), DT, Context);
+set_payment_status(PaymentId, Status, DT, Context) when is_integer(PaymentId), is_list(Status) ->
+    set_payment_status(PaymentId, list_to_existing_atom(Status), DT, Context);
+set_payment_status(PaymentId, Status, DT, Context) when is_integer(PaymentId), is_atom(Status) ->
     validate_payment_status(Status),
-    case m_payment:set_payment_status(PaymentId, Status, Context) of
+    case m_payment:set_payment_status(PaymentId, Status, DT, Context) of
         {ok, changed} ->
             % Status is the new payment status
             {ok, Payment} = m_payment:get(PaymentId, Context),
