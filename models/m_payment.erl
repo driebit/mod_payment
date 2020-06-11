@@ -466,7 +466,7 @@ add_status_date_column(Context) ->
         false ->
             [] = z_db:q("
                 ALTER TABLE payment
-                ADD COLUMN status_date timestamp with timezone
+                ADD COLUMN status_date timestamp with time zone
                 ", Context),
             z_db:flush(Context),
             ok
