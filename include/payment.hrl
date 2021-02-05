@@ -76,3 +76,14 @@
     psp_external_id :: binary(),
     psp_data :: term()
 }).
+
+
+%% @doc Synchronization request, used for checking the current
+%%      payment status of new and pending transactions.
+-record(payment_psp_status_sync, {
+    payment_id :: integer(),
+    psp_module :: atom(),
+    psp_external_id :: binary(),
+    psp_data :: term()
+}).
+

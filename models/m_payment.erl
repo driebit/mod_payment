@@ -34,6 +34,7 @@
     cancel_recurring_payment/2,
 
     search_query/2,
+    list_status_check/1,
 
     install/1
 ]).
@@ -353,6 +354,20 @@ search_query({Offset, Limit}, Context) ->
 total(Context) ->
     z_db:q1("select count(*) from payment", Context).
 
+
+%% @doc Return a list of all payments that are in a temporary status.
+-spec list_status_check( z:context() ) -> list( proplists:proplist() ).
+list_status_check(Context) ->
+    Yesterday = z_datetime:prev_day( calendar:universal_time() ),
+    z_db:assoc("
+            select *
+            from payment
+            where status in ('new', 'pending')
+              and status_date < $1
+            order by id
+        ",
+        [ Yesterday ],
+        Context).
 
 -spec payment_psp_view_url(binary()|integer(), z:context()) -> {ok, binary()} | {error, term()}.
 payment_psp_view_url(PaymentId, Context) ->

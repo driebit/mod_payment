@@ -1,8 +1,8 @@
 %% @author Marc Worrell <marc@worrell.nl>
-%% @copyright 2018-2019 Driebit BV
+%% @copyright 2018-2021 Driebit BV
 %% @doc Payment module. Interfacing to PSP modules.
 
-%% Copyright 2018-2019 Driebit BV
+%% Copyright 2018-2021 Driebit BV
 %%
 %% Licensed under the Apache License, Version 2.0 (the "License");
 %% you may not use this file except in compliance with the License.
@@ -29,6 +29,8 @@
     event/2,
     observe_search_query/2,
     observe_payment_request/2,
+
+    observe_tick_24h/2,
 
     observe_export_resource_visible/2,
     observe_export_resource_filename/2,
@@ -122,7 +124,26 @@ event(#submit{ message={cancel_subscription, _Args} }, Context) ->
         ok -> m_payment:cancel_recurring_payment(UserId, Context);
         _ -> noop
     end,
-    z_render:wire({redirect, [ {location, m_rsc:page_url(UserId, Context)} ]}, Context).
+    z_render:wire({redirect, [ {location, m_rsc:page_url(UserId, Context)} ]}, Context);
+event(#submit{ message={update_status, Args} }, Context) ->
+    case z_acl:is_allowed(use, mod_payment, Context) orelse z_acl:is_admin(Context) of
+        true ->
+            {payment_id, PaymentId} = proplists:lookup(payment_id, Args),
+            NewStatus = z_context:get_q(status, Context),
+            set_payment_status(PaymentId, NewStatus, Context),
+            ?zInfo("Payment ~p manually changed to '~s'", [ PaymentId, NewStatus ], Context),
+            z_render:wire({reload, []}, Context);
+        false ->
+            z_render:growl_error(?__("You do not have permission to change the status", Context), Context)
+    end;
+event(#postback{ message={sync_pending, _} }, Context) ->
+    case z_acl:is_allowed(use, mod_payment, Context) orelse z_acl:is_admin(Context) of
+        true ->
+            sync_pending(Context),
+            z_render:growl(?__("Checking status for pending and new transactions, come back later.", Context), Context);
+        false ->
+            z_render:growl_error(?__("You do not have permission to change the status", Context), Context)
+    end.
 
 
 observe_search_query(#search_query{ search={payments, _Args}, offsetlimit=OffsetLimit }, Context) ->
@@ -188,6 +209,58 @@ observe_payment_request(#payment_request{} = Req, Context) ->
             Error
     end.
 
+
+%% @doc Every day all pending and new transactions are checked for external status changes.
+observe_tick_24h(tick_24h, Context) ->
+    sync_pending(Context).
+
+sync_pending(Context) ->
+    ContextAsync = z_context:prune_for_async(Context),
+    erlang:spawn(
+        fun() ->
+            AllPending = m_payment:list_status_check(ContextAsync),
+            lists:map(
+                fun(Payment) ->
+                    {id, PaymentId} = proplists:lookup(id, Payment),
+                    PspSync = #payment_psp_status_sync{
+                        payment_id = PaymentId,
+                        psp_module = psp_module( proplists:get_value(psp_module, Payment) ),
+                        psp_external_id = proplists:get_value(psp_external_id, Payment),
+                        psp_data = proplists:get_value(psp_data, Payment)
+                    },
+                    case z_notifier:first(PspSync, ContextAsync) of
+                        ok ->
+                            ok;
+                        {error, _} ->
+                            maybe_set_error(Payment, ContextAsync);
+                        undefined ->
+                            maybe_set_error(Payment, ContextAsync)
+                    end
+                end,
+                AllPending)
+        end).
+
+psp_module(<<>>) -> undefined;
+psp_module(Mod) -> binary_to_atom(Mod, utf8).
+
+maybe_set_error(Payment, Context) ->
+    OneWeekAgo = prev_day(7, calendar:universal_time()),
+    LastUpdate = case proplists:get_value(status_date, Payment) of
+        undefined -> proplists:get_value(modified, Payment);
+        DT -> DT
+    end,
+    case LastUpdate < OneWeekAgo of
+        true ->
+            % Too old - set to error.
+            {id, PaymentId} = proplists:lookup(id, Payment),
+            lager:info("Payment: Set payment ~p as error due to timeout.", [ PaymentId ]),
+            set_payment_status(PaymentId, error, Context);
+        false ->
+            ok
+    end.
+
+prev_day(0, DT) -> DT;
+prev_day(N, DT) when N > 0 -> prev_day( N-1, z_datetime:prev_day(DT) ).
 
 -spec observe_export_resource_visible(#export_resource_visible{}, z:context()) -> boolean() | undefined.
 observe_export_resource_visible(#export_resource_visible{dispatch = export_payments_csv}, Context) ->
