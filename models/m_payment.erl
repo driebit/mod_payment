@@ -1,7 +1,7 @@
-%% @copyright 2018-2020 Driebit BV
+%% @copyright 2018-2021 Driebit BV
 %% @doc Main payment model and SQL definitions.
 
-%% Copyright 2018-2020 Driebit BV
+%% Copyright 2018-2021 Driebit BV
 %%
 %% Licensed under the Apache License, Version 2.0 (the "License");
 %% you may not use this file except in compliance with the License.
@@ -355,10 +355,11 @@ total(Context) ->
     z_db:q1("select count(*) from payment", Context).
 
 
-%% @doc Return a list of all payments that are in a temporary status.
+%% @doc Return a list of all payments that are in a temporary status for longer
+%%      than an hour.
 -spec list_status_check( z:context() ) -> list( proplists:proplist() ).
 list_status_check(Context) ->
-    Yesterday = z_datetime:prev_day( calendar:universal_time() ),
+    LastHour = z_datetime:prev_hour( calendar:universal_time() ),
     z_db:assoc("
             select *
             from payment
@@ -366,7 +367,7 @@ list_status_check(Context) ->
               and status_date < $1
             order by id
         ",
-        [ Yesterday ],
+        [ LastHour ],
         Context).
 
 -spec payment_psp_view_url(binary()|integer(), z:context()) -> {ok, binary()} | {error, term()}.
