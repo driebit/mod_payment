@@ -364,7 +364,8 @@ list_status_check(Context) ->
             select *
             from payment
             where status in ('new', 'pending')
-              and status_date < $1
+              and (   status_date is null
+                   or status_date < $1)
             order by id
         ",
         [ LastHour ],
