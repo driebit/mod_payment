@@ -21,7 +21,7 @@
 -mod_title("Payments").
 -mod_description("Payment services using Payment Service Provider modules").
 -mod_author("Driebit").
--mod_schema(1).
+-mod_schema(3).
 
 -author("Driebit <tech@driebit.nl>").
 
@@ -118,8 +118,15 @@ event(#submit{message={payment, Args} }, Context) ->
                 ]},
                 Context)
     end;
-event(#submit{ message={cancel_subscription, _Args} }, Context) ->
-    UserId = z_acl:user(Context),
+event(#submit{ message={cancel_subscription, Args} }, Context) ->
+    UserId = proplists:get_value(user_id, Args, z_acl:user(Context)),
+    case z_notifier:first(#cancel_subscription_psp_request{ user_id = UserId }, Context) of
+        ok -> m_payment:cancel_recurring_payment(UserId, Context);
+        _ -> noop
+    end,
+    z_render:wire({redirect, [ {location, m_rsc:page_url(UserId, Context)} ]}, Context);
+event(#postback{ message={cancel_subscription, Args} }, Context) ->
+    UserId = proplists:get_value(user_id, Args, z_acl:user(Context)),
     case z_notifier:first(#cancel_subscription_psp_request{ user_id = UserId }, Context) of
         ok -> m_payment:cancel_recurring_payment(UserId, Context);
         _ -> noop
@@ -322,7 +329,9 @@ set_payment_status(PaymentId, Status, DT, Context) when is_integer(PaymentId), i
                     user_id = proplists:get_value(user_id, Payment),
                     is_paid = proplists:get_value(is_paid, Payment, false),
                     is_failed = proplists:get_value(is_failed, Payment, false),
-                    status = proplists:get_value(status, Payment)
+                    is_recurring = is_integer( proplists:get_value(recurring_payment_id, Payment) ),
+                    status = proplists:get_value(status, Payment),
+                    date = proplists:get_value(status_date, Payment)
                 },
                 Context),
             ok;

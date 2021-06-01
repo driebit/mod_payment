@@ -37,9 +37,10 @@
     user_id :: m_rsc:resource(),
     is_paid :: boolean(),
     is_failed :: boolean(),
-    status :: binary()
+    is_recurring :: boolean(),
+    status :: binary(),
+    date :: calendar:datetime()
 }).
-
 
 
 

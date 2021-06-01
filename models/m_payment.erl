@@ -25,6 +25,8 @@
     list_user/2,
 
     insert/2,
+    insert_recurring/4,
+    insert_recurring/5,
     get/2,
     get_by_psp/3,
     update_psp_handler/3,
@@ -75,7 +77,7 @@ list_user(UserId, Context) ->
         select *
         from payment
         where user_id = $1
-        order by id desc",
+        order by created desc",
         [UserId],
         Context),
     lists:map(
@@ -114,6 +116,52 @@ insert(PaymentReq, Context) ->
     case validate_payment(Props) of
         ok ->
             z_db:insert(payment, Props, Context);
+        {error, _} = Error ->
+            Error
+    end.
+
+%% @doc Insert a recurring payment, automatically paid via the PSP. The RecurringPaymentId
+%% refers to the recurring payment that started the subscription.
+insert_recurring(RecurringPaymentId, Currency, Amount, Context) ->
+    insert_recurring(RecurringPaymentId, erlang:universaltime(), Currency, Amount, Context).
+
+insert_recurring(RecurringPaymentId, Created, Currency, Amount, Context) ->
+    case ?MODULE:get(RecurringPaymentId, Context) of
+        {ok, Payment} ->
+            Currency1 = case Currency of
+                undefined -> proplists:get_value(currency, Payment);
+                _ -> Currency
+            end,
+            Props = [
+                {payment_nr, z_convert:to_binary(z_ids:identifier(32))},
+                {recurring_payment_id, RecurringPaymentId},
+                {psp_module, proplists:get_value(psp_module, Payment)},
+                {user_id, proplists:get_value(user_id, Payment)},
+                {recurring, false},
+                {key, proplists:get_value(key, Payment)},
+                {currency, Currency1},
+                {amount, z_convert:to_float(Amount)},
+                {description, proplists:get_value(description, Payment)},
+                {description_html, proplists:get_value(description_html, Payment)},
+                {name_first, proplists:get_value(name_first, Payment)},
+                {name_surname_prefix, proplists:get_value(name_surname_prefix, Payment)},
+                {name_surname, proplists:get_value(name_surname, Payment)},
+                {address_street_1, proplists:get_value(address_street_1, Payment)},
+                {address_street_2, proplists:get_value(address_street_2, Payment)},
+                {address_postcode, proplists:get_value(address_postcode, Payment)},
+                {address_city, proplists:get_value(address_city, Payment)},
+                {address_state, proplists:get_value(address_state, Payment)},
+                {address_country, proplists:get_value(address_country, Payment)},
+                {email, proplists:get_value(email, Payment)},
+                {phone, proplists:get_value(phone, Payment)},
+                {created, Created}
+            ],
+            case validate_payment(Props) of
+                ok ->
+                    z_db:insert(payment, Props, Context);
+                {error, _} = Error ->
+                    Error
+            end;
         {error, _} = Error ->
             Error
     end.
@@ -325,6 +373,7 @@ set_payment_status(PaymentId, Status, StatusDate, Context) ->
                         set status = $1,
                             status_date = $3
                         where id = $2
+                          and status <> $1
                           and (   status_date is null
                                or status_date <= $3)",
                         [Status, PaymentId, StatusDate],
@@ -341,7 +390,7 @@ search_query({Offset, Limit}, Context) ->
     Rows = z_db:assoc("
         select *
         from payment
-        order by id desc
+        order by created desc
         offset $1
         limit $2",
         [Offset-1, Limit],
@@ -402,6 +451,7 @@ install(Context) ->
                     status character varying(16) not null default 'new',
                     status_date timestamp,
                     recurring boolean not null default false,
+                    recurring_payment_id int,
 
                     psp_module character varying(64),
                     psp_external_id character varying(64),
@@ -441,6 +491,10 @@ install(Context) ->
                         on update cascade on delete set null
                 )", Context),
             [] = z_db:q("
+                create index payment_created_key
+                on payment (created)",
+                Context),
+            [] = z_db:q("
                 create index fki_payment_user_id
                 on payment (user_id)",
                 Context),
@@ -452,13 +506,52 @@ install(Context) ->
                 create index payment_psp_external_id_key
                 on payment (psp_external_id)",
                 Context),
+            [] = z_db:q("
+                create index fki_payment_recurring_payment_id
+                on payment (recurring_payment_id)",
+                Context),
+            [] = z_db:q("
+                ALTER TABLE payment
+                ADD CONSTRAINT fk_payment_recurring_payment_id FOREIGN KEY (recurring_payment_id)
+                REFERENCES payment (id)
+                ON UPDATE CASCADE ON DELETE RESTRICT",
+                Context),
             ok;
         true ->
+            add_recurring_payment_id_column(Context),
             add_recurring_column(Context),
             add_status_date_column(Context),
+            [] = z_db:q("
+                create index if not exists payment_created_key
+                on payment (created)",
+                Context),
             ok
     end.
 
+
+%% @doc Add recurring_payment_id column if it was not yet present
+add_recurring_payment_id_column(Context) ->
+    case lists:member(recurring_payment_id, z_db:column_names(payment, Context)) of
+        true ->
+            ok;
+        false ->
+            [] = z_db:q("
+                ALTER TABLE payment
+                ADD COLUMN recurring_payment_id int
+                ", Context),
+            [] = z_db:q("
+                create index fki_payment_recurring_payment_id
+                on payment (recurring_payment_id)",
+                Context),
+            [] = z_db:q("
+                ALTER TABLE payment
+                ADD CONSTRAINT fk_payment_recurring_payment_id FOREIGN KEY (recurring_payment_id)
+                REFERENCES payment (id)
+                ON UPDATE CASCADE ON DELETE RESTRICT",
+                Context),
+            z_db:flush(Context),
+            ok
+    end.
 
 
 %% @doc Add recurring column if it was not yet present

@@ -32,7 +32,11 @@
         <tr>
             <th>{_ Name _}</th>
             <td>
-                {{ p.name_first|escape }} {{ p.name_surname_prefix|escape }} {{ p.name_surname|escape }}
+                {% if p.user_id %}
+                    <a href="{% url admin_edit_rsc id=p.user_id %}">{% include "_name.tpl" id=p.user_id %}</a>
+                {% else %}
+                    {{ p.name_first|escape }} {{ p.name_surname_prefix|escape }} {{ p.name_surname|escape }}
+                {% endif %}
             </td>
         </tr>
         <tr>
