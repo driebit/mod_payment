@@ -247,8 +247,9 @@ sync_pending(Context) ->
                 AllPending)
         end).
 
+psp_module(undefined) -> undefined;
 psp_module(<<>>) -> undefined;
-psp_module(Mod) -> binary_to_atom(Mod, utf8).
+psp_module(Mod) when is_binary(Mod) -> binary_to_atom(Mod, utf8).
 
 maybe_set_error(Payment, Context) ->
     OneWeekAgo = prev_day(7, calendar:universal_time()),
