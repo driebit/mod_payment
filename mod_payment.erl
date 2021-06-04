@@ -55,83 +55,98 @@ event(#submit{message={payment, Args} }, Context) ->
         undefined -> z_acl:user(Context);
         UId when is_integer(UId) -> UId
     end,
-    Recurring = case proplists:get_value(recurring, Args) of
-        undefined -> z_convert:to_bool( z_context:get_q(<<"recurring">>, Context) );
-        R -> z_convert:to_bool(R)
-    end,
-    Amount = case proplists:get_value(amount, Args) of
-        undefined -> z_convert:to_float(z_context:get_q_validated(amount, Context));
-        ArgAmount -> ArgAmount
-    end,
-    Currency = case proplists:get_value(currency, Args) of
-        undefined -> ?PAYMENT_CURRENCY_DEFAULT;
-        ArgCurrency -> ArgCurrency
-    end,
-    Description = case proplists:get_value(description, Args) of
-        undefined ->
-            case z_html:escape(z_context:get_q(<<"description">>, Context)) of
-                <<>> -> proplists:get_value(default_description, Args);
-                undefined -> proplists:get_value(default_description, Args);
-                Desc -> Desc
+    case is_allowed(UserId, Context) of
+        true ->
+            Recurring = case proplists:get_value(recurring, Args) of
+                undefined -> z_convert:to_bool( z_context:get_q(<<"recurring">>, Context) );
+                R -> z_convert:to_bool(R)
+            end,
+            Amount = case proplists:get_value(amount, Args) of
+                undefined -> z_convert:to_float(z_context:get_q_validated(amount, Context));
+                ArgAmount -> ArgAmount
+            end,
+            Currency = case proplists:get_value(currency, Args) of
+                undefined -> ?PAYMENT_CURRENCY_DEFAULT;
+                ArgCurrency -> ArgCurrency
+            end,
+            Description = case proplists:get_value(description, Args) of
+                undefined ->
+                    case z_html:escape(z_context:get_q(<<"description">>, Context)) of
+                        <<>> -> proplists:get_value(default_description, Args);
+                        undefined -> proplists:get_value(default_description, Args);
+                        Desc -> Desc
+                    end;
+                Desc ->
+                    Desc
+            end,
+            ExtraProps = lists:filter(
+                fun
+                    ({key, _}) -> false;
+                    ({amount, _}) -> false;
+                    ({currency, _}) -> false;
+                    ({user_id, _}) -> false;
+                    ({recurring, _}) -> false;
+                    ({description, _}) -> false;
+                    ({default_description, _}) -> false;
+                    ({_, _}) -> true
+                end,
+                Args),
+            PaymentRequest = #payment_request{
+                key = z_convert:to_binary(Key),
+                user_id = UserId,
+                amount = Amount,
+                currency = Currency,
+                language = z_context:language(Context),
+                description_html = Description,
+                is_qargs = true,
+                recurring = Recurring,
+                extra_props = ExtraProps
+            },
+            case z_notifier:first(PaymentRequest, Context) of
+                #payment_request_redirect{ redirect_uri = RedirectUri } ->
+                    z_render:wire({redirect, [ {location, RedirectUri} ]}, Context);
+                {error, _Reason} ->
+                    z_render:wire(
+                        {alert, [
+                            {title, ?__("Sorry", Context)},
+                            {text, ?__("Something went wrong whilst handling the payment request, please try again later.", Context)}
+                        ]},
+                        Context);
+                undefined ->
+                    z_render:wire(
+                        {alert, [
+                            {title, ?__("Sorry", Context)},
+                            {text, ?__("At the moment we cannot handle payments, please try again later.", Context)}
+                        ]},
+                        Context)
             end;
-        Desc ->
-            Desc
-    end,
-    ExtraProps = lists:filter(
-        fun
-            ({key, _}) -> false;
-            ({amount, _}) -> false;
-            ({currency, _}) -> false;
-            ({user_id, _}) -> false;
-            ({recurring, _}) -> false;
-            ({description, _}) -> false;
-            ({default_description, _}) -> false;
-            ({_, _}) -> true
-        end,
-        Args),
-    PaymentRequest = #payment_request{
-        key = z_convert:to_binary(Key),
-        user_id = UserId,
-        amount = Amount,
-        currency = Currency,
-        language = z_context:language(Context),
-        description_html = Description,
-        is_qargs = true,
-        recurring = Recurring,
-        extra_props = ExtraProps
-    },
-    case z_notifier:first(PaymentRequest, Context) of
-        #payment_request_redirect{ redirect_uri = RedirectUri } ->
-            z_render:wire({redirect, [ {location, RedirectUri} ]}, Context);
-        {error, _Reason} ->
-            z_render:wire(
-                {alert, [
-                    {title, ?__("Sorry", Context)},
-                    {text, ?__("Something went wrong whilst handling the payment request, please try again later.", Context)}
-                ]},
-                Context);
-        undefined ->
-            z_render:wire(
-                {alert, [
-                    {title, ?__("Sorry", Context)},
-                    {text, ?__("At the moment we cannot handle payments, please try again later.", Context)}
-                ]},
-                Context)
+        false ->
+            z_render:growl_error(?__("Sorry, you are not allowed to do this.", Context), Context)
     end;
 event(#submit{ message={cancel_subscription, Args} }, Context) ->
     UserId = proplists:get_value(user_id, Args, z_acl:user(Context)),
-    case z_notifier:first(#cancel_subscription_psp_request{ user_id = UserId }, Context) of
-        ok -> m_payment:cancel_recurring_payment(UserId, Context);
-        _ -> noop
-    end,
-    z_render:wire({redirect, [ {location, m_rsc:page_url(UserId, Context)} ]}, Context);
+    case is_allowed(UserId, Context) of
+        true ->
+            case z_notifier:first(#cancel_subscription_psp_request{ user_id = UserId }, Context) of
+                ok -> m_payment:cancel_recurring_payment(UserId, Context);
+                _ -> noop
+            end,
+            z_render:wire({redirect, [ {location, m_rsc:page_url(UserId, Context)} ]}, Context);
+        false ->
+            z_render:growl_error(?__("Sorry, you are not allowed to do this.", Context), Context)
+    end;
 event(#postback{ message={cancel_subscription, Args} }, Context) ->
     UserId = proplists:get_value(user_id, Args, z_acl:user(Context)),
-    case z_notifier:first(#cancel_subscription_psp_request{ user_id = UserId }, Context) of
-        ok -> m_payment:cancel_recurring_payment(UserId, Context);
-        _ -> noop
-    end,
-    z_render:wire({redirect, [ {location, m_rsc:page_url(UserId, Context)} ]}, Context);
+    case is_allowed(UserId, Context) of
+        true ->
+            case z_notifier:first(#cancel_subscription_psp_request{ user_id = UserId }, Context) of
+                ok -> m_payment:cancel_recurring_payment(UserId, Context);
+                _ -> noop
+            end,
+            z_render:wire({redirect, [ {location, m_rsc:page_url(UserId, Context)} ]}, Context);
+        false ->
+            z_render:growl_error(?__("Sorry, you are not allowed to do this.", Context), Context)
+    end;
 event(#submit{ message={update_status, Args} }, Context) ->
     case z_acl:is_allowed(use, mod_payment, Context) orelse z_acl:is_admin(Context) of
         true ->
@@ -151,6 +166,11 @@ event(#postback{ message={sync_pending, _} }, Context) ->
         false ->
             z_render:growl_error(?__("You do not have permission to change the status", Context), Context)
     end.
+
+is_allowed(UserId, Context) ->
+    UserId =:= z_acl:user(Context)
+    orelse z_acl:is_admin(Context)
+    orelse z_acl:is_allowed(use, mod_payment, Context).
 
 
 observe_search_query(#search_query{ search={payments, _Args}, offsetlimit=OffsetLimit }, Context) ->
