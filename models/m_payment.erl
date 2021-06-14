@@ -25,8 +25,8 @@
     list_user/2,
 
     insert/2,
-    insert_recurring/4,
-    insert_recurring/5,
+    insert_recurring_payment/4,
+    insert_recurring_payment/5,
     get/2,
     get_by_psp/3,
     update_psp_handler/3,
@@ -104,7 +104,7 @@ insert(PaymentReq, Context) ->
     Props = [
         {user_id, UserId},
         {payment_nr, PaymentNr},
-        {recurring, PaymentReq#payment_request.recurring},
+        {is_recurring_start, PaymentReq#payment_request.is_recurring_start},
         {key, PaymentReq#payment_request.key},
         {currency, PaymentReq#payment_request.currency},
         {amount, PaymentReq#payment_request.amount},
@@ -122,10 +122,10 @@ insert(PaymentReq, Context) ->
 
 %% @doc Insert a recurring payment, automatically paid via the PSP. The RecurringPaymentId
 %% refers to the recurring payment that started the subscription.
-insert_recurring(RecurringPaymentId, Currency, Amount, Context) ->
-    insert_recurring(RecurringPaymentId, erlang:universaltime(), Currency, Amount, Context).
+insert_recurring_payment(RecurringPaymentId, Currency, Amount, Context) ->
+    insert_recurring_payment(RecurringPaymentId, erlang:universaltime(), Currency, Amount, Context).
 
-insert_recurring(RecurringPaymentId, Created, Currency, Amount, Context) ->
+insert_recurring_payment(RecurringPaymentId, Created, Currency, Amount, Context) ->
     case ?MODULE:get(RecurringPaymentId, Context) of
         {ok, Payment} ->
             Currency1 = case Currency of
@@ -137,7 +137,7 @@ insert_recurring(RecurringPaymentId, Created, Currency, Amount, Context) ->
                 {recurring_payment_id, RecurringPaymentId},
                 {psp_module, proplists:get_value(psp_module, Payment)},
                 {user_id, proplists:get_value(user_id, Payment)},
-                {recurring, false},
+                {is_recurring_start, false},
                 {key, proplists:get_value(key, Payment)},
                 {currency, Currency1},
                 {amount, z_convert:to_float(Amount)},
@@ -450,7 +450,7 @@ install(Context) ->
                     payment_nr character varying(64) not null,
                     status character varying(16) not null default 'new',
                     status_date timestamp,
-                    recurring boolean not null default false,
+                    is_recurring_start boolean not null default false,
                     recurring_payment_id int,
 
                     psp_module character varying(64),
@@ -556,17 +556,28 @@ add_recurring_payment_id_column(Context) ->
 
 %% @doc Add recurring column if it was not yet present
 add_recurring_column(Context) ->
-    case lists:member(recurring, z_db:column_names(payment, Context)) of
+    case lists:member(is_recurring_start, z_db:column_names(payment, Context)) of
         true ->
             ok;
         false ->
-            [] = z_db:q("
-                ALTER TABLE payment
-                ADD COLUMN recurring boolean not null default false
-                ", Context),
-            z_db:flush(Context),
-            ok
+            case lists:member(recurring, z_db:column_names(payment, Context)) of
+                true ->
+                    [] = z_db:q("
+                        ALTER TABLE payment
+                        RENAME COLUMN recurring TO is_recurring_start
+                        ", Context),
+                    z_db:flush(Context),
+                    ok;
+                false ->
+                    [] = z_db:q("
+                        ALTER TABLE payment
+                        ADD COLUMN is_recurring_start boolean not null default false
+                        ", Context),
+                    z_db:flush(Context),
+                    ok
+            end
     end.
+
 
 %% @doc Add status_date column if it was not yet present
 add_status_date_column(Context) ->
@@ -584,4 +595,4 @@ add_status_date_column(Context) ->
 
 
 cancel_recurring_payment(UserId, Context) ->
-    z_db:q("update payment set recurring = false where user_id = $1", [UserId], Context).
+    z_db:q("update payment set is_recurring_start = false where user_id = $1", [UserId], Context).

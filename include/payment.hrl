@@ -16,7 +16,7 @@
     description = undefined :: binary() | undefined,
     description_html = undefined :: binary() | undefined,
     language :: atom(),
-    recurring = false :: boolean(),
+    is_recurring_start = false :: boolean(),
     extra_props = [] :: list( {atom(), binary()} )
 }).
 
@@ -37,7 +37,7 @@
     user_id :: m_rsc:resource(),
     is_paid :: boolean(),
     is_failed :: boolean(),
-    is_recurring :: boolean(),
+    is_recurring_payment :: boolean(),
     status :: binary(),
     date :: calendar:datetime()
 }).
@@ -52,12 +52,12 @@
     payment_nr :: binary(),
     currency :: binary(),
     amount :: float(),
-    recurring :: boolean()
+    is_recurring_start :: boolean()
 }).
 
 %% Notification for mod_payment, requesting a PSP to cancel a recurring payment.
 %%
--record(cancel_subscription_psp_request, {
+-record(cancel_recurring_psp_request, {
     user_id :: integer()
 }).
 

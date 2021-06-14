@@ -21,7 +21,7 @@
 -mod_title("Payments").
 -mod_description("Payment services using Payment Service Provider modules").
 -mod_author("Driebit").
--mod_schema(3).
+-mod_schema(5).
 
 -author("Driebit <tech@driebit.nl>").
 
@@ -57,8 +57,8 @@ event(#submit{message={payment, Args} }, Context) ->
     end,
     case is_allowed(UserId, Context) of
         true ->
-            Recurring = case proplists:get_value(recurring, Args) of
-                undefined -> z_convert:to_bool( z_context:get_q(<<"recurring">>, Context) );
+            Recurring = case proplists:get_value(is_recurring_start, Args) of
+                undefined -> z_convert:to_bool( z_context:get_q(<<"is_recurring_start">>, Context) );
                 R -> z_convert:to_bool(R)
             end,
             Amount = case proplists:get_value(amount, Args) of
@@ -85,7 +85,7 @@ event(#submit{message={payment, Args} }, Context) ->
                     ({amount, _}) -> false;
                     ({currency, _}) -> false;
                     ({user_id, _}) -> false;
-                    ({recurring, _}) -> false;
+                    ({is_recurring_start, _}) -> false;
                     ({description, _}) -> false;
                     ({default_description, _}) -> false;
                     ({_, _}) -> true
@@ -99,7 +99,7 @@ event(#submit{message={payment, Args} }, Context) ->
                 language = z_context:language(Context),
                 description_html = Description,
                 is_qargs = true,
-                recurring = Recurring,
+                is_recurring_start = Recurring,
                 extra_props = ExtraProps
             },
             case z_notifier:first(PaymentRequest, Context) of
@@ -123,11 +123,11 @@ event(#submit{message={payment, Args} }, Context) ->
         false ->
             z_render:growl_error(?__("Sorry, you are not allowed to do this.", Context), Context)
     end;
-event(#submit{ message={cancel_subscription, Args} }, Context) ->
+event(#submit{ message={cancel_recurring, Args} }, Context) ->
     UserId = proplists:get_value(user_id, Args, z_acl:user(Context)),
     case is_allowed(UserId, Context) of
         true ->
-            case z_notifier:first(#cancel_subscription_psp_request{ user_id = UserId }, Context) of
+            case z_notifier:first(#cancel_recurring_psp_request{ user_id = UserId }, Context) of
                 ok -> m_payment:cancel_recurring_payment(UserId, Context);
                 _ -> noop
             end,
@@ -135,11 +135,11 @@ event(#submit{ message={cancel_subscription, Args} }, Context) ->
         false ->
             z_render:growl_error(?__("Sorry, you are not allowed to do this.", Context), Context)
     end;
-event(#postback{ message={cancel_subscription, Args} }, Context) ->
+event(#postback{ message={cancel_recurring, Args} }, Context) ->
     UserId = proplists:get_value(user_id, Args, z_acl:user(Context)),
     case is_allowed(UserId, Context) of
         true ->
-            case z_notifier:first(#cancel_subscription_psp_request{ user_id = UserId }, Context) of
+            case z_notifier:first(#cancel_recurring_psp_request{ user_id = UserId }, Context) of
                 ok -> m_payment:cancel_recurring_payment(UserId, Context);
                 _ -> noop
             end,
@@ -209,7 +209,7 @@ observe_payment_request(#payment_request{} = Req, Context) ->
                 payment_nr = proplists:get_value(payment_nr, Payment),
                 currency = proplists:get_value(currency, Payment),
                 amount = proplists:get_value(amount, Payment),
-                recurring = proplists:get_value(recurring, Payment)
+                is_recurring_start = proplists:get_value(is_recurring_start, Payment)
             },
             case z_notifier:first(PspReq, Context) of
                 {ok, #payment_psp_handler{} = Handler} ->
@@ -350,7 +350,7 @@ set_payment_status(PaymentId, Status, DT, Context) when is_integer(PaymentId), i
                     user_id = proplists:get_value(user_id, Payment),
                     is_paid = proplists:get_value(is_paid, Payment, false),
                     is_failed = proplists:get_value(is_failed, Payment, false),
-                    is_recurring = is_integer( proplists:get_value(recurring_payment_id, Payment) ),
+                    is_recurring_payment = is_integer( proplists:get_value(recurring_payment_id, Payment) ),
                     status = proplists:get_value(status, Payment),
                     date = proplists:get_value(status_date, Payment)
                 },

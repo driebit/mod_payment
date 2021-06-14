@@ -20,7 +20,7 @@ Optional arguments of the payment postback:
  * `key` - an identification of the payment type, also shown on the overview in the admin
  * `amount` - the amount to be paid, overrules the `amount` form field
  * `currency` - the currency for the amount, overrules `currency` form field (defaults to EUR)
- * `recurring` - if the payment is recurring, overrules `recurring` form field (defaults to false)
+ * `is_recurring_start` - if the payment is recurring, overrules `is_recurring_start` form field (defaults to false)
  * `user_id` - the id of the user the payment is for (defaults to the current user)
  * `description` - the description for the ordered goods/services (HTML)
  * `default_description` - used as the description if both `description` and `q.description` are empty
@@ -35,7 +35,7 @@ Required fields for the payment form:
 Optional fields for the payment form:
 
  * `currency` - if there is no currency in the postback, the used currency, defaults to `EUR`
- * `recurring` - flag if the payment should be a recurring payment, defaults to `false` (see section below)
+ * `is_recurring_start` - flag if the payment should be a recurring payment, defaults to `false` (see section below)
  * `name_first` - first name (defaults to current user's)
  * `phone` - phone number (defaults to current user's)
  * `address_street_1` - First line of address (defaults to current user's)
