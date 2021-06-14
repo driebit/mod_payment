@@ -11,6 +11,10 @@
             <th>{_ Amount _}</th>
             <td>
                 {{ p.currency|replace:"EUR":"€"|escape }} {{ p.amount|format_price }}
+
+                {% if p.is_recurring_start %}
+                    &nbsp; <span class="badge">{_ Recurring _}</span>
+                {% endif %}
             </td>
         </tr>
         <tr>
@@ -32,7 +36,11 @@
         <tr>
             <th>{_ Name _}</th>
             <td>
-                {{ p.name_first|escape }} {{ p.name_surname_prefix|escape }} {{ p.name_surname|escape }}
+                {% if p.user_id %}
+                    <a href="{% url admin_edit_rsc id=p.user_id %}">{% include "_name.tpl" id=p.user_id %}</a>
+                {% else %}
+                    {{ p.name_first|escape }} {{ p.name_surname_prefix|escape }} {{ p.name_surname|escape }}
+                {% endif %}
             </td>
         </tr>
         <tr>
