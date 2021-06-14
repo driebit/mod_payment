@@ -11,6 +11,10 @@
             <th>{_ Amount _}</th>
             <td>
                 {{ p.currency|replace:"EUR":"€"|escape }} {{ p.amount|format_price }}
+
+                {% if p.is_recurring_start %}
+                    &nbsp; <span class="badge">{_ Recurring _}</span>
+                {% endif %}
             </td>
         </tr>
         <tr>
