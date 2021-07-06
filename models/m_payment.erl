@@ -38,7 +38,9 @@
     search_query/2,
     list_status_check/1,
 
-    install/1
+    install/1,
+
+    indices/2
 ]).
 
 -include("zotonic.hrl").
@@ -521,12 +523,33 @@ install(Context) ->
             add_recurring_payment_id_column(Context),
             add_recurring_column(Context),
             add_status_date_column(Context),
-            [] = z_db:q("
-                create index if not exists payment_created_key
-                on payment (created)",
-                Context),
+            case lists:member(<<"payment_created_key">>, indices("payment", Context)) of
+                true ->
+                    ok;
+                false ->
+                    [] = z_db:q("
+                        create index payment_created_key
+                        on payment (created)",
+                        Context)
+            end,
             ok
     end.
+
+indices(Table, Context) ->
+    Is = z_db:q("
+        select i.relname
+        from pg_class t,
+             pg_class i,
+             pg_index ix,
+             pg_attribute a
+        where t.oid = ix.indrelid
+          and i.oid = ix.indexrelid
+          and a.attrelid = t.oid
+          and a.attnum = ANY(ix.indkey)
+          and t.relkind = 'r'
+          and t.relname = $1
+        ", [ Table ], Context),
+    [ I || {I} <- Is ].
 
 
 %% @doc Add recurring_payment_id column if it was not yet present
