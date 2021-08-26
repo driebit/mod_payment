@@ -378,7 +378,7 @@ set_payment_status(PaymentId, Status, StatusDate, Context) ->
                           and status <> $1
                           and (   status_date is null
                                or status_date <= $3)",
-                        [Status, PaymentId, StatusDate],
+                        [z_convert:to_binary(Status), PaymentId, StatusDate],
                         Ctx)
                     of
                         0 -> {ok, unchanged};
