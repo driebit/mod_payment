@@ -372,10 +372,10 @@ set_payment_status(PaymentId, Status, StatusDate, Context) ->
                 _OldStatus ->
                     case z_db:q("
                         update payment
-                        set status = $1,
+                        set status = $1::varchar,
                             status_date = $3
                         where id = $2
-                          and status <> $1
+                          and status <> $1::varchar
                           and (   status_date is null
                                or status_date <= $3)",
                         [z_convert:to_binary(Status), PaymentId, StatusDate],
