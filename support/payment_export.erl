@@ -46,7 +46,7 @@ headers() ->
     ].
 
 data(Context) ->
-    #search_result{result = Result} = z_search:search(payments, {1, undefined}, Context),
+    #search_result{result = Result} = z_search:search(payments, {1, 1000000}, Context),
     {ok, Result}.
 
 values(Item, Context) ->

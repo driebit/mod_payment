@@ -1,0 +1,168 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+# NB: Consider using poEdit <http://poedit.sourceforge.net>
+#
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"POT-Creation-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"PO-Revision-Date: 2023-03-30 15:03+0200\n"
+"Last-Translator: Marc Worrell <marc@worrell.nl>\n"
+"Language-Team: \n"
+"Language: nl\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 3.2.2\n"
+
+#: user/modules/mod_payment/templates/_dialog_payment_info.tpl:47
+msgid "Address"
+msgstr "Adresgegevens"
+
+#: user/modules/mod_payment/templates/admin_payments.tpl:42 user/modules/mod_payment/templates/_dialog_payment_info.tpl:11
+msgid "Amount"
+msgstr "Bedrag"
+
+#: user/modules/mod_payment/mod_payment.erl:119
+msgid "At the moment we cannot handle payments, please try again later."
+msgstr "Op dit moment kunnen we geen betalingen verwerken, probeer het later nog eens."
+
+#: user/modules/mod_payment/templates/_dialog_payment_info.tpl:105
+msgid "Change status"
+msgstr "Status wijzigen"
+
+#: user/modules/mod_payment/templates/_dialog_payment_info.tpl:121
+msgid "Changing the status can make the system inconsistent as the external PSP will not be in sync anymore."
+msgstr "Het veranderen van de status kan het systeem inconsistent maken, omdat de externe PSP dan niet meer synchroon loopt."
+
+#: user/modules/mod_payment/mod_payment.erl:165
+msgid "Checking status for pending and new transactions, come back later."
+msgstr "Status controleren voor lopende en nieuwe transacties, kom later terug."
+
+#: user/modules/mod_payment/templates/_dialog_payment_info.tpl:128
+msgid "Close"
+msgstr "Sluiten"
+
+#: user/modules/mod_payment/templates/payment_redirect_psp.tpl:12
+msgid "Close Window"
+msgstr "Sluit venster"
+
+#: user/modules/mod_payment/templates/admin_payments.tpl:33 user/modules/mod_payment/templates/_dialog_payment_info.tpl:31
+msgid "Date"
+msgstr "Datum"
+
+#: user/modules/mod_payment/templates/admin_payments.tpl:39 user/modules/mod_payment/templates/_dialog_payment_info.tpl:21
+msgid "Description"
+msgstr "Beschrijving"
+
+#: user/modules/mod_payment/templates/admin_payments.tpl:48 user/modules/mod_payment/templates/_dialog_payment_info.tpl:56
+msgid "Email"
+msgstr "E-mail"
+
+#: user/modules/mod_payment/templates/admin_payments.tpl:15
+msgid "Export"
+msgstr "Exporteer"
+
+#: user/modules/mod_payment/templates/admin_payments.tpl:45 user/modules/mod_payment/templates/_dialog_payment_info.tpl:37
+msgid "Name"
+msgstr "Naam"
+
+#: user/modules/mod_payment/templates/_dialog_payment_info.tpl:78
+msgid "No PSP"
+msgstr "Geen PSP"
+
+#: user/modules/mod_payment/templates/admin_payments.tpl:107
+msgid "No payments found."
+msgstr "Geen betalingen gevonden."
+
+#: user/modules/mod_payment/templates/admin_payments.tpl:128
+msgid "Only administrators are allowed to see payments"
+msgstr "Alleen beheerders mogen betalingen zien"
+
+#: user/modules/mod_payment/templates/_dialog_payment_info.tpl:68
+msgid "PSP"
+msgstr "PSP"
+
+#: user/modules/mod_payment/templates/admin_payments.tpl:118
+msgid "Payment"
+msgstr "Betaling"
+
+#: user/modules/mod_payment/templates/admin_payments.tpl:3 user/modules/mod_payment/templates/admin_payments.tpl:7 user/modules/mod_payment/mod_payment.erl:190
+msgid "Payments"
+msgstr "Betalingen"
+
+#: user/modules/mod_payment/templates/admin_payments.tpl:51 user/modules/mod_payment/templates/_dialog_payment_info.tpl:62
+msgid "Phone"
+msgstr "Mobiel"
+
+#: user/modules/mod_payment/templates/_dialog_payment_info.tpl:16
+msgid "Recurring"
+msgstr "Periodiek"
+
+#: user/modules/mod_payment/templates/payment_redirect_psp.tpl:17
+msgid "Redirecting to payment service provider..."
+msgstr "U wordt doorgestuurd naar een beveiligde betalingsprovider."
+
+#: user/modules/mod_payment/templates/_dialog_payment_info.tpl:129
+msgid "Save"
+msgstr "Opslaan"
+
+#: user/modules/mod_payment/mod_payment.erl:112
+msgid "Something went wrong whilst handling the payment request, please try again later."
+msgstr "Er is iets misgegaan bij de verwerking van het betalingsverzoek, probeer het later nog eens."
+
+#: user/modules/mod_payment/mod_payment.erl:111 user/modules/mod_payment/mod_payment.erl:118
+msgid "Sorry"
+msgstr "Sorry"
+
+#: user/modules/mod_payment/mod_payment.erl:124 user/modules/mod_payment/mod_payment.erl:136 user/modules/mod_payment/mod_payment.erl:148
+msgid "Sorry, you are not allowed to do this."
+msgstr "Sorry, je mag dit niet doen."
+
+#: user/modules/mod_payment/templates/payment_psp_done.tpl:42
+msgid "Sorry, you are not allowed to view this payment."
+msgstr "Sorry, je mag deze betaling niet bekijken."
+
+#: user/modules/mod_payment/templates/admin_payments.tpl:36 user/modules/mod_payment/templates/_dialog_payment_info.tpl:4
+msgid "Status"
+msgstr "Status"
+
+#: user/modules/mod_payment/templates/admin_payments.tpl:21
+msgid "Sync new &amp; pending"
+msgstr "Sync nieuwe &amp; open"
+
+#: user/modules/mod_payment/templates/payment_psp_done.tpl:25
+msgid "Thank you for your payment!"
+msgstr "Bedankt voor uw betaling!"
+
+#: user/modules/mod_payment/templates/payment_psp_done.tpl:19
+msgid "Unknown payment"
+msgstr "Onbekende betaling"
+
+#: user/modules/mod_payment/templates/payment_redirect_psp.tpl:8
+msgid "Unknown payment or no detail page available."
+msgstr "Onbekende betaling of geen detailpagina beschikbaar."
+
+#: user/modules/mod_payment/templates/admin_payments.tpl:62
+msgid "Y-m-d H:i"
+msgstr "Y-m-d H:i"
+
+#: user/modules/mod_payment/mod_payment.erl:159 user/modules/mod_payment/mod_payment.erl:167
+msgid "You do not have permission to change the status"
+msgstr "Je hebt geen toestemming om de status te veranderen"
+
+#: user/modules/mod_payment/templates/payment_psp_done.tpl:37
+msgid "Your payment is pending."
+msgstr "Uw betaling is in behandeling."
+
+#: user/modules/mod_payment/templates/payment_psp_done.tpl:31
+msgid "Your payment was not handled."
+msgstr "Uw betaling werd niet afgehandeld."
+
+#: user/modules/mod_payment/templates/_dialog_payment_info.tpl:73
+msgid "view at PSP"
+msgstr "bekijk bij PSP"
