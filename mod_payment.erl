@@ -1,8 +1,9 @@
 %% @author Marc Worrell <marc@worrell.nl>
-%% @copyright 2018-2021 Driebit BV
+%% @copyright 2018-2024 Driebit BV
 %% @doc Payment module. Interfacing to PSP modules.
+%% @end
 
-%% Copyright 2018-2021 Driebit BV
+%% Copyright 2018-2024 Driebit BV
 %%
 %% Licensed under the Apache License, Version 2.0 (the "License");
 %% you may not use this file except in compliance with the License.
@@ -246,7 +247,8 @@ sync_pending(Context) ->
     erlang:spawn(
         fun() ->
             AllPending = m_payment:list_status_check(ContextAsync),
-            lists:map(
+            lager:info("Payment: checking ~p pending payments - start", [ length(AllPending) ]),
+            lists:foreach(
                 fun(Payment) ->
                     {id, PaymentId} = proplists:lookup(id, Payment),
                     PspSync = #payment_psp_status_sync{
@@ -264,7 +266,8 @@ sync_pending(Context) ->
                             maybe_set_error(Payment, ContextAsync)
                     end
                 end,
-                AllPending)
+                AllPending),
+            lager:info("Payment: checking ~p pending payments - done", [ length(AllPending) ])
         end).
 
 psp_module(undefined) -> undefined;
