@@ -1,7 +1,10 @@
-%% @copyright 2018-2021 Driebit BV
-%% @doc Main payment model and SQL definitions.
+%% @copyright 2018-2024 Driebit BV
+%% @doc Main payment model and SQL definitions. Maintains a single table of all
+%% payments. All PSP modules store their payments in this table, including extra
+%% PSP specific properties.
+%% @end
 
-%% Copyright 2018-2021 Driebit BV
+%% Copyright 2018-2024 Driebit BV
 %%
 %% Licensed under the Apache License, Version 2.0 (the "License");
 %% you may not use this file except in compliance with the License.
@@ -39,11 +42,11 @@
     list_status_check/1,
 
     install/1,
-
+    delete_all_payments/1,
     indices/2
 ]).
 
--include("zotonic.hrl").
+-include_lib("zotonic.hrl").
 -include("../include/payment.hrl").
 
 m_find_value(redirect_psp, #m{ value = undefined } = M, _Context) ->
@@ -440,6 +443,11 @@ payment_psp_view_url(PaymentId, Context) ->
             Error
     end.
 
+-spec delete_all_payments(z:context()) -> ok.
+delete_all_payments(Context) ->
+    z_db:q("delete from payment", Context),
+    z_db:q("delete from payment", Context),
+    ok.
 
 -spec install(z:context()) -> ok.
 install(Context) ->
