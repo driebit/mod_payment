@@ -445,7 +445,7 @@ payment_psp_view_url(PaymentId, Context) ->
 
 -spec delete_all_payments(z:context()) -> ok.
 delete_all_payments(Context) ->
-    z_db:q("delete from payment", Context),
+    z_db:q("delete from payment_log", Context),
     z_db:q("delete from payment", Context),
     ok.
 
