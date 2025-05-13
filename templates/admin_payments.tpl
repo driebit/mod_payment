@@ -112,6 +112,8 @@
             </table>
 
             {% pager result=result dispatch=`payments_admin_overview` qargs hide_single_page %}
+
+            <hr>
         {% endwith %}
 
         {% wire name="payment-info"
