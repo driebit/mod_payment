@@ -166,6 +166,23 @@ event(#postback{ message={sync_pending, _} }, Context) ->
             z_render:growl(?__("Checking status for pending and new transactions, come back later.", Context), Context);
         false ->
             z_render:growl_error(?__("You do not have permission to change the status", Context), Context)
+    end;
+event(#postback{ message={sync_customer, Args} }, Context) ->
+    case z_acl:is_allowed(use, mod_payment, Context) orelse z_acl:is_admin(Context) of
+        true ->
+            case m_rsc:rid(proplists:get_value(id, Args), Context) of
+                Id when is_integer(Id) ->
+                    case sync_customer(Id, Context) of
+                        ok ->
+                            z_render:growl(?__("Synchronized person details to PSP.", Context), Context);
+                        {error, _} ->
+                            z_render:growl_error(?__("Could not synchronize person details to PSP.", Context), Context)
+                    end;
+                undefined ->
+                    z_render:growl_error(?__("Missing user id for customer sync", Context), Context)
+            end;
+        false ->
+            z_render:growl_error(?__("You do not have permission to change the status", Context), Context)
     end.
 
 is_allowed(UserId, Context) ->
@@ -236,6 +253,21 @@ observe_payment_request(#payment_request{} = Req, Context) ->
                         [ Reason, Req, z_context:get_q_all_noz(Context) ]),
             Error
     end.
+
+%% @doc Synchronize the email address and name of a customer to the PSP.
+sync_customer(CustId, Context) ->
+    case z_notifier:first(#payment_psp_customer_sync{ user_id = CustId }, Context) of
+        ok ->
+            lager:info("Payment: customer sync for #~p done", [ CustId ]),
+            ok;
+        undefined ->
+            lager:error("Payment: customer sync for #~p failed: ~p", [ CustId, nohandler ]),
+            {error, nohandler};
+        {error, Reason} = Error ->
+            lager:error("Payment: customer sync for #~p failed: ~p", [ CustId, Reason ]),
+            Error
+    end.
+
 
 
 %% @doc Every day all pending and new transactions are checked for external status changes.
