@@ -46,7 +46,6 @@
 
 %% Notification for mod_payment, requesting a PSP to pick this up.
 %% Returns a #payment_psp_handler{}
-%%
 -record(payment_psp_request, {
     payment_id :: integer(),
     payment_nr :: binary(),
@@ -88,3 +87,8 @@
     psp_data :: term()
 }).
 
+%% Notification for mod_payment, request to synchronize the user
+%% details to the customer of the psp.
+-record(payment_psp_customer_sync, {
+    user_id :: m_rsc:resource_id()
+}).
